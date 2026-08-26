@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ filename }} - 构建管理{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head">
+    <div class="section-title">
+      <h2>{{ filename }}</h2>
+      <span class="section-sub"><code class="inline-code">.log</code></span>
+    </div>
+    <a href="/logs" class="btn btn-ghost">返回列表</a>
+  </div>
+  <p class="log-meta"><span class="badge badge-info">日志详情</span> <code class="inline-code">{{ filename }}</code></p>
+  <div class="log-view-wrap">
+    <pre class="log-view">{{ content }}</pre>
+  </div>
+</section>
+{% endblock %}

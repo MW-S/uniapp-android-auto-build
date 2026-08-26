@@ -1,0 +1,6 @@
+lark-oapi
+webdavclient3
+PyYAML
+requests
+flask
+pytest

@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}项目概览 - 构建管理{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="section-head">
+    <div class="section-title">
+      <h2>已配置项目</h2>
+      <span class="section-sub">共 {{ projects|length }} 个</span>
+    </div>
+    <span id="manager-status" class="badge {% if is_busy %}badge-busy{% else %}badge-idle{% endif %}">
+      {% if is_busy %}构建中：{{ current_project_name }}{% else %}空闲{% endif %}
+    </span>
+  </div>
+  <div class="cards">
+    {% for project in projects %}
+    <div class="card{% if is_busy and current_project_name == project.name %} is-building{% endif %}" data-project-key="{{ project.key }}" data-project-name="{{ project.name }}">
+      <div class="card-head">
+        <div class="card-title-main">
+          <h3>{{ project.name }}</h3>
+          <span class="badge {% if is_busy and current_project_name == project.name %}badge-busy{% else %}badge-idle{% endif %}" data-status>
+            {% if is_busy and current_project_name == project.name %}构建中{% else %}空闲{% endif %}
+          </span>
+        </div>
+        <span class="badge badge-key">{{ project.key }}</span>
+      </div>
+      <div class="card-meta">
+        {% if project.is_default %}<span class="badge badge-default">默认项目</span>{% endif %}
+      </div>
+      {% if project.aliases %}
+      <div class="card-chips">
+        <span class="chip-label">触发词</span>
+        <div class="chips">
+          {% for alias in project.aliases.split("、") if alias %}
+          <span class="chip">{{ alias }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="card-foot">
+        <button class="btn btn-primary trigger-btn" data-trigger="{{ project.key }}" {% if is_busy %}disabled{% endif %}>
+          {% if is_busy and current_project_name == project.name %}构建中…{% else %}触发构建{% endif %}
+        </button>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty">暂未配置项目，请前往「配置管理」添加项目。</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <div class="section-title">
+      <h2>最近构建记录</h2>
+      <a href="/logs" class="section-sub">查看全部</a>
+    </div>
+  </div>
+  {% if recent_builds %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>日志文件</th><th class="col-nowrap">时间</th></tr>
+      </thead>
+      <tbody>
+        {% for entry in recent_builds %}
+        <tr>
+          <td class="col-filename"><a class="link-file" href="{{ url_for('log_view', filename=entry.name) }}">{{ entry.name }}</a></td>
+          <td class="col-nowrap">{{ entry.time }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">暂无构建日志</p>
+  {% endif %}
+</section>
+
+<section id="poll-panel" class="section poll-panel hidden">
+  <div class="poll-head">
+    <h2><span class="poll-dot"></span>构建进度</h2>
+    <span id="poll-project" class="badge badge-busy"></span>
+  </div>
+  <pre id="poll-output" class="poll-output"></pre>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const panel = document.getElementById("poll-panel");
+  const output = document.getElementById("poll-output");
+  const projectLabel = document.getElementById("poll-project");
+  const statusBadge = document.getElementById("manager-status");
+  let timer = null;
+  let lastCard = null;
+
+  function cardOf(btn) {
+    return btn ? btn.closest(".card") : null;
+  }
+
+  function setCardStatus(card, state) {
+    if (!card) return;
+    const badge = card.querySelector("[data-status]");
+    const map = {
+      idle: ["badge badge-idle", "空闲"],
+      busy: ["badge badge-busy", "构建中"],
+      success: ["badge badge-success", "成功"],
+      failed: ["badge badge-failed", "失败"]
+    };
+    const entry = map[state] || map.idle;
+    if (badge) {
+      badge.className = entry[0];
+      badge.textContent = entry[1];
+    }
+    card.classList.remove("is-building", "is-success", "is-failed");
+    if (state === "busy") card.classList.add("is-building");
+    if (state === "success") card.classList.add("is-success");
+    if (state === "failed") card.classList.add("is-failed");
+  }
+
+  function resetButtons() {
+    document.querySelectorAll(".trigger-btn").forEach((btn) => {
+      btn.disabled = false;
+      btn.textContent = "触发构建";
+    });
+  }
+
+  async function trigger(key) {
+    const clicked = document.querySelector('.trigger-btn[data-trigger="' + key + '"]');
+    const card = cardOf(clicked);
+    lastCard = card;
+    document.querySelectorAll(".trigger-btn").forEach((btn) => {
+      btn.disabled = true;
+      btn.textContent = btn === clicked ? "构建中…" : "触发构建";
+    });
+    setCardStatus(card, "busy");
+    projectLabel.className = "badge badge-busy";
+    projectLabel.textContent = key + " 构建中";
+    output.classList.remove("poll-ok", "poll-fail");
+    output.textContent = "正在触发构建…";
+    let data;
+    try {
+      const resp = await fetch("/build/" + encodeURIComponent(key), { method: "POST" });
+      data = await resp.json();
+    } catch (err) {
+      output.textContent = "请求失败，请稍后重试";
+      resetButtons();
+      setCardStatus(lastCard, "idle");
+      lastCard = null;
+      return;
+    }
+    if (data.ok) {
+      panel.classList.remove("hidden");
+      statusBadge.textContent = "构建中：" + key;
+      statusBadge.className = "badge badge-busy";
+      startPolling(data.job_id);
+    } else {
+      output.textContent = data.reason || "触发失败";
+      resetButtons();
+      setCardStatus(card, "idle");
+      lastCard = null;
+    }
+  }
+
+  function startPolling(jobId) {
+    if (timer) clearInterval(timer);
+    const poll = async () => {
+      let data;
+      try {
+        const resp = await fetch("/build/" + encodeURIComponent(jobId));
+        data = await resp.json();
+      } catch (err) {
+        return;
+      }
+      if (!data.ok) {
+        output.textContent = data.reason || "状态获取失败";
+        stopPolling();
+        return;
+      }
+      if (data.project_name) {
+        projectLabel.textContent = data.project_name + " 构建中";
+      }
+      if (data.summary) output.textContent = data.summary;
+      if (!data.busy) {
+        stopPolling();
+        const ok = !!(data.final && data.final.indexOf("构建成功") !== -1);
+        output.textContent = data.final || output.textContent || "构建完成";
+        output.classList.add(ok ? "poll-ok" : "poll-fail");
+        statusBadge.textContent = "空闲";
+        statusBadge.className = "badge badge-idle";
+        projectLabel.textContent = ok ? "构建成功" : "构建失败";
+        projectLabel.className = "badge " + (ok ? "badge-success" : "badge-failed");
+        resetButtons();
+        setCardStatus(lastCard, ok ? "success" : "failed");
+      }
+    };
+    poll();
+    timer = setInterval(poll, 2000);
+  }
+
+  function stopPolling() {
+    if (timer) clearInterval(timer);
+    timer = null;
+  }
+
+  document.querySelectorAll(".trigger-btn").forEach((btn) => {
+    btn.addEventListener("click", () => trigger(btn.dataset.trigger));
+  });
+
+  {% if is_busy and current_job_id %}
+  panel.classList.remove("hidden");
+  projectLabel.textContent = "任务 {{ current_job_id }}";
+  startPolling("{{ current_job_id }}");
+  {% endif %}
+})();
+</script>
+{% endblock %}

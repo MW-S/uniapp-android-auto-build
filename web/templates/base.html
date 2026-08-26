@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}构建管理{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <span class="nav-brand-mark">构</span>
+      <span>uni-app 自动构建</span>
+    </a>
+    <div class="nav-links">
+      <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">项目概览</a>
+      <a href="/config" class="nav-link {% if request.path == '/config' %}active{% endif %}">配置管理</a>
+      <a href="/logs" class="nav-link {% if request.path.startswith('/logs') %}active{% endif %}">构建日志</a>
+    </div>
+  </nav>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

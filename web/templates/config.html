@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}配置管理 - 构建管理{% endblock %}
+{% macro project_block(p, i) %}
+<details class="project-block" {% if p.get("key") or p.get("name") %}open{% endif %}>
+  <summary class="project-summary">
+    <span class="project-summary-title">
+      <span class="project-order">{{ (i + 1) if i is number else "新" }}</span>
+      <span class="project-name">{{ p.get("name") or "未命名项目" }}</span>
+      {% if p.get("key") %}<span class="badge badge-key">{{ p.get("key") }}</span>{% endif %}
+    </span>
+    <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); removeProject(this)">删除项目</button>
+  </summary>
+  <div class="project-block-body">
+    <div class="form-grid">
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][key]">项目 key<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][key]" name="projects[{{ i }}][key]" value="{{ p.get("key", "") }}" placeholder="如 mes-pda" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][name]">项目名称<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][name]" name="projects[{{ i }}][name]" value="{{ p.get("name", "") }}" placeholder="如 金蝉MES PDA" required>
+      </div>
+      <div class="form-item form-item-wide">
+        <label class="form-label" for="projects[{{ i }}][aliases]">触发词 aliases（逗号分隔）<span class="form-label-desc">可选</span></label>
+        <input class="form-input" id="projects[{{ i }}][aliases]" name="projects[{{ i }}][aliases]" value="{{ ", ".join(p.get("aliases") or []) }}" placeholder="pda, 手持, mes-pda">
+      </div>
+    </div>
+    <div class="project-group-title">git <span class="group-tag">repo / branch</span></div>
+    <div class="form-grid">
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][git][repo_dir]">git 仓库路径 repo_dir<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][git][repo_dir]" name="projects[{{ i }}][git][repo_dir]" value="{{ p.get("git", {}).get("repo_dir", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][git][branch]">分支 branch<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][git][branch]" name="projects[{{ i }}][git][branch]" value="{{ p.get("git", {}).get("branch", "") }}" placeholder="master" required>
+      </div>
+    </div>
+    <div class="project-group-title">HBuilderX <span class="group-tag">cli / project / appid</span></div>
+    <div class="form-grid">
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][hbuilderx][cli_path]">cli.exe 路径 cli_path<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][hbuilderx][cli_path]" name="projects[{{ i }}][hbuilderx][cli_path]" value="{{ p.get("hbuilderx", {}).get("cli_path", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][hbuilderx][project_name]">HBuilderX 项目名 project_name<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][hbuilderx][project_name]" name="projects[{{ i }}][hbuilderx][project_name]" value="{{ p.get("hbuilderx", {}).get("project_name", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][hbuilderx][appid]">uni-app appid<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][hbuilderx][appid]" name="projects[{{ i }}][hbuilderx][appid]" value="{{ p.get("hbuilderx", {}).get("appid", "") }}" placeholder="__UNI__XXXXXXX" required>
+      </div>
+    </div>
+    <div class="project-group-title">Android 壳工程 <span class="group-tag">project / assets / apk</span></div>
+    <div class="form-grid">
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][android][project_dir]">壳工程目录 project_dir<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][android][project_dir]" name="projects[{{ i }}][android][project_dir]" value="{{ p.get("android", {}).get("project_dir", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][android][assets_dir]">资源目录 assets_dir<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][android][assets_dir]" name="projects[{{ i }}][android][assets_dir]" value="{{ p.get("android", {}).get("assets_dir", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][android][apk_output]">APK 输出目录 apk_output<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][android][apk_output]" name="projects[{{ i }}][android][apk_output]" value="{{ p.get("android", {}).get("apk_output", "") }}" required>
+      </div>
+    </div>
+    <div class="project-group-title">kodcloud 可道云 <span class="group-tag">webdav / upload</span></div>
+    <div class="form-grid">
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][kodcloud][webdav_url]">WebDAV 地址 webdav_url<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][kodcloud][webdav_url]" name="projects[{{ i }}][kodcloud][webdav_url]" value="{{ p.get("kodcloud", {}).get("webdav_url", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][kodcloud][username]">用户名 username<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][kodcloud][username]" name="projects[{{ i }}][kodcloud][username]" value="{{ p.get("kodcloud", {}).get("username", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][kodcloud][password]">密码 password<span class="required-star">*</span></label>
+        <input class="form-input" type="password" id="projects[{{ i }}][kodcloud][password]" name="projects[{{ i }}][kodcloud][password]" value="{{ p.get("kodcloud", {}).get("password", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][kodcloud][remote_dir]">上传目录 remote_dir<span class="required-star">*</span></label>
+        <input class="form-input" id="projects[{{ i }}][kodcloud][remote_dir]" name="projects[{{ i }}][kodcloud][remote_dir]" value="{{ p.get("kodcloud", {}).get("remote_dir", "") }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="projects[{{ i }}][kodcloud][apk_prefix]">APK 文件名前缀 apk_prefix<span class="form-label-desc">可选</span></label>
+        <input class="form-input" id="projects[{{ i }}][kodcloud][apk_prefix]" name="projects[{{ i }}][kodcloud][apk_prefix]" value="{{ p.get("kodcloud", {}).get("apk_prefix", "") }}">
+      </div>
+    </div>
+  </div>
+</details>
+{% endmacro %}
+{% block content %}
+<section class="section">
+  <div class="section-head">
+    <div class="section-title">
+      <h2>配置管理</h2>
+      <span class="section-sub">保存后立即生效</span>
+    </div>
+  </div>
+  <p class="config-path">当前配置文件：<code class="inline-code">{{ config_path }}</code></p>
+  <p class="hint">保存后将立即生效，原配置会自动备份为 config.yaml.bak.时间戳。</p>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages or error %}
+      {% if error %}
+      <div class="flash flash-error">
+        <span class="flash-icon">!</span>
+        <span class="flash-msg">{{ error }}</span>
+        <button type="button" class="flash-close" onclick="this.parentElement.remove()">×</button>
+      </div>
+      {% endif %}
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">
+        <span class="flash-icon">{{ "✓" if category == "success" else "!" }}</span>
+        <span class="flash-msg">{{ message }}</span>
+        <button type="button" class="flash-close" onclick="this.parentElement.remove()">×</button>
+      </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+</section>
+
+<form method="post" action="{{ url_for('config_page') }}">
+  <div class="form-group">
+    <div class="form-group-title title-feishu">
+      <span class="group-icon">飞</span>
+      飞书机器人（全局）
+    </div>
+    <div class="form-grid">
+      <div class="form-item">
+        <label class="form-label" for="feishu[app_id]">App ID<span class="required-star">*</span></label>
+        <input class="form-input" id="feishu[app_id]" name="feishu[app_id]" value="{{ cfg.feishu.app_id if cfg.feishu else "" }}" required>
+      </div>
+      <div class="form-item">
+        <label class="form-label" for="feishu[app_secret]">App Secret<span class="required-star">*</span></label>
+        <input class="form-input" type="password" id="feishu[app_secret]" name="feishu[app_secret]" value="{{ cfg.feishu.app_secret if cfg.feishu else "" }}" required>
+      </div>
+      <div class="form-item form-item-wide">
+        <label class="form-label" for="feishu[trigger_keywords]">触发关键词（每行一个）<span class="required-star">*</span></label>
+        <textarea class="form-textarea" id="feishu[trigger_keywords]" name="feishu[trigger_keywords]" rows="4" required>{% for kw in (cfg.feishu.trigger_keywords if cfg.feishu else []) %}{{ kw }}
+{% endfor %}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <div class="form-group-title title-project">
+      <span class="group-icon">默</span>
+      默认项目
+    </div>
+    <div class="form-grid">
+      <div class="form-item">
+        <label class="form-label" for="default_project">未识别项目时默认构建的项目<span class="form-label-desc">可选</span></label>
+        <select class="form-input" id="default_project" name="default_project">
+          <option value="">不设置默认项目</option>
+          {% for p in cfg.projects %}
+          <option value="{{ p.key }}" {% if cfg.default_project and cfg.default_project == p.key %}selected{% endif %}>{{ p.key }} - {{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-title">
+        <h2>项目列表</h2>
+        <span class="section-sub">共 {{ cfg.projects|length }} 个</span>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" onclick="addProject()">添加项目</button>
+    </div>
+    <div id="projects-container">
+      {% for p in cfg.projects %}
+      {{ project_block(p, loop.index0) }}
+      {% endfor %}
+      {% if not cfg.projects %}
+      <p class="empty">暂无项目，点击右上角「添加项目」开始配置。</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <div class="section form-actions">
+    <div class="form-actions-left">
+      <button type="submit" class="btn btn-primary btn-lg">保存配置</button>
+      <span class="tag-legend"><span class="required-star">*</span> 号为必填项</span>
+    </div>
+    <span class="hint">保存后将立即生效，自动备份原配置</span>
+  </div>
+</form>
+
+<template id="project-template">{{ project_block({}, "__INDEX__") }}</template>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  let projectIndex = document.querySelectorAll(".project-block").length;
+
+  window.addProject = function () {
+    const tpl = document.getElementById("project-template");
+    const html = tpl.innerHTML.replace(/__INDEX__/g, projectIndex);
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    const block = wrapper.firstElementChild;
+    document.getElementById("projects-container").appendChild(block);
+    block.open = true;
+    projectIndex += 1;
+  };
+
+  window.removeProject = function (btn) {
+    btn.closest(".project-block").remove();
+  };
+})();
+</script>
+{% endblock %}
