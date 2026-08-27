@@ -4,6 +4,8 @@ A self-hosted CI/CD pipeline that turns [uni-app](https://uniapp.dcloud.net.cn/)
 
 **English** | [简体中文](./README.zh-CN.md)
 
+[![Build & Release](https://github.com/MW-S/uniapp-android-auto-build/actions/workflows/release.yml/badge.svg)](https://github.com/MW-S/uniapp-android-auto-build/actions/workflows/release.yml)
+
 ## How it works
 
 ```
@@ -103,6 +105,8 @@ python main.py --host 0.0.0.0 --port 9000
 ## Build a standalone executable (no Python required)
 
 Use PyInstaller to package the whole tool into a single-file executable so it can run on build machines without a Python environment.
+
+> Pre-built executables are published automatically to [GitHub Releases](https://github.com/MW-S/uniapp-android-auto-build/releases) for every `vX.Y.Z` tag — download the zip, extract it, and follow the distribution steps below. Build it yourself only when you need changes.
 
 > The pipeline only supports Windows (see Prerequisites), and so does the packaged exe — build on Windows.
 

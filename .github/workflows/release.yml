@@ -1,0 +1,60 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -q
+
+      - name: Build executable
+        run: python -m PyInstaller uniapp-android-auto-build.spec --noconfirm --clean
+
+      - name: Copy config template
+        run: Copy-Item config.yaml.example dist\config.yaml.example
+
+      - name: Package distribution zip
+        run: Compress-Archive -Path dist\uniapp-android-auto-build.exe, dist\config.yaml.example -DestinationPath uniapp-android-auto-build-${{ env.RELEASE_TAG }}-win-x64.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: uniapp-android-auto-build ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            uniapp-android-auto-build-${{ env.RELEASE_TAG }}-win-x64.zip
+            dist/uniapp-android-auto-build.exe
+            dist/config.yaml.example

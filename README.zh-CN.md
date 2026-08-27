@@ -4,6 +4,8 @@
 
 [English](./README.md) | **简体中文**
 
+[![Build & Release](https://github.com/MW-S/uniapp-android-auto-build/actions/workflows/release.yml/badge.svg)](https://github.com/MW-S/uniapp-android-auto-build/actions/workflows/release.yml)
+
 ## 工作原理
 
 ```
@@ -103,6 +105,8 @@ python main.py --host 0.0.0.0 --port 9000
 ## 打包为独立可执行文件（目标机器无需安装 Python）
 
 使用 PyInstaller 可将整个工具打包为单文件可执行程序，方便在没有 Python 环境的打包机上运行。
+
+> 每推送一个 `vX.Y.Z` 标签，GitHub Actions 会自动打包并发布到 [GitHub Releases](https://github.com/MW-S/uniapp-android-auto-build/releases)——直接下载压缩包解压，按下文分发步骤使用即可；仅在需要修改代码时才自行打包。
 
 > 流水线仅支持 Windows（见环境要求），打包产物同样如此——请在 Windows 上执行打包。
 
