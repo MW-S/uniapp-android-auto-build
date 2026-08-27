@@ -100,6 +100,47 @@ python main.py --host 0.0.0.0 --port 9000
 
 > The console has **no authentication** and binds `127.0.0.1` by default. If you expose it to a network, put it behind a reverse proxy with auth.
 
+## Build a standalone executable (no Python required)
+
+Use PyInstaller to package the whole tool into a single-file executable so it can run on build machines without a Python environment.
+
+> The pipeline only supports Windows (see Prerequisites), and so does the packaged exe — build on Windows.
+
+### Build
+
+```bat
+pip install -r requirements-dev.txt
+build_exe.bat
+```
+
+The script installs PyInstaller automatically if missing. Output under `dist\`:
+
+| File | Description |
+|---|---|
+| `uniapp-android-auto-build.exe` | Standalone executable (console app, ~43 MB) |
+| `config.yaml.example` | Config template (copied automatically by the script) |
+
+### Distribute & run on the target machine
+
+1. Put `uniapp-android-auto-build.exe` and `config.yaml.example` into the **same folder**.
+2. Run the exe for the first time: it detects the missing config, generates `config.yaml` from the template, and exits.
+3. Fill in `config.yaml` (see Configuration reference), then run the exe again to start the services.
+
+Runtime behavior:
+
+| Item | Behavior |
+|---|---|
+| Config location | The exe always reads `config.yaml` from its own directory, regardless of the current working directory |
+| Log location | `logs\` folder next to the exe |
+| CLI arguments | Identical to source mode: `--web-only`, `--bot-only`, `--run-once`, `--project`, `--list`, `--config`, `--host`, `--port` |
+| Startup time | The first launch needs a few seconds to self-extract; subsequent launches are faster |
+
+Notes:
+
+- `config.yaml` contains credentials — never distribute it publicly.
+- Some antivirus software may falsely flag PyInstaller executables; add an exclusion or fall back to source mode.
+- To upgrade, rebuild with `build_exe.bat` and replace the exe; your existing `config.yaml` and `logs\` are unaffected.
+
 ## Configuration reference
 
 See [config.yaml.example](./config.yaml.example) for a fully commented sample. Key fields:
@@ -145,9 +186,12 @@ python -m pytest tests/ -v
 
 ```
 ├── main.py                  # Entry: web console + Feishu bot (dual service)
-├── start.bat                # Quick start script
+├── start.bat                # Quick start script (source mode)
+├── build_exe.bat            # Build standalone executable (PyInstaller)
+├── uniapp-android-auto-build.spec  # PyInstaller build configuration
 ├── config.yaml.example      # Configuration template
 ├── requirements.txt
+├── requirements-dev.txt     # Dev dependencies (incl. PyInstaller)
 ├── bot/
 │   └── feishu_bot.py        # Feishu bot (WebSocket long connection)
 ├── pipeline/

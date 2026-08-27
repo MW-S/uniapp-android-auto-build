@@ -11,11 +11,11 @@ from pipeline import git_step
 from pipeline import hbuilderx_step
 from pipeline import kodcloud_upload_step
 from pipeline.common import StepResult
+from pipeline.common import app_root_dir
 from pipeline.config import ConfigError
 from pipeline.config import default_project
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOG_DIR = os.path.join(ROOT_DIR, "logs")
+LOG_DIR = os.path.join(app_root_dir(), "logs")
 
 STEP_GIT = "git更新代码"
 STEP_HBUILDERX = "HBuilderX资源打包"

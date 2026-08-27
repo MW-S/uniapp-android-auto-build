@@ -1,8 +1,11 @@
 import argparse
 import os
+import shutil
 import sys
 import threading
 
+from pipeline.common import app_root_dir
+from pipeline.common import is_frozen
 from pipeline.config import ConfigError
 from pipeline.config import default_project
 from pipeline.config import load_config
@@ -29,6 +32,17 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1", help="Web 服务监听地址，默认 127.0.0.1")
     parser.add_argument("--port", type=int, default=8000, help="Web 服务监听端口，默认 8000")
     args = parser.parse_args()
+
+    if is_frozen() and args.config == "config.yaml":
+        args.config = os.path.join(app_root_dir(), "config.yaml")
+
+    if not os.path.isfile(args.config):
+        example_path = os.path.join(os.path.dirname(os.path.abspath(args.config)), "config.yaml.example")
+        if os.path.isfile(example_path):
+            shutil.copyfile(example_path, args.config)
+            print(f"首次运行: 已自动生成配置模板 {os.path.abspath(args.config)}")
+            print("请填写配置内容后重新运行本程序")
+            return 2
 
     try:
         cfg = load_config(args.config)

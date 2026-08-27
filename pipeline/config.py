@@ -83,7 +83,10 @@ def validate_config(cfg: dict) -> None:
 
 def load_config(path: str = "config.yaml") -> dict:
     if not os.path.isfile(path):
-        raise ConfigError("未找到配置文件，请复制 config.yaml.example 为 config.yaml 并填写")
+        raise ConfigError(
+            f"未找到配置文件: {os.path.abspath(path)}，"
+            "请复制 config.yaml.example 为 config.yaml 并填写"
+        )
     with open(path, "r", encoding="utf-8") as fp:
         try:
             cfg = yaml.safe_load(fp)

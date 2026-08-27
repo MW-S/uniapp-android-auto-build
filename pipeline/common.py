@@ -1,4 +1,16 @@
+import os
+import sys
 from dataclasses import dataclass, field
+
+
+def is_frozen() -> bool:
+    return bool(getattr(sys, "frozen", False))
+
+
+def app_root_dir() -> str:
+    if is_frozen():
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @dataclass

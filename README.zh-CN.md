@@ -100,6 +100,47 @@ python main.py --host 0.0.0.0 --port 9000
 
 > 控制台**没有登录鉴权**，默认只监听 `127.0.0.1`。如需对外暴露，请务必置于带鉴权的反向代理之后。
 
+## 打包为独立可执行文件（目标机器无需安装 Python）
+
+使用 PyInstaller 可将整个工具打包为单文件可执行程序，方便在没有 Python 环境的打包机上运行。
+
+> 流水线仅支持 Windows（见环境要求），打包产物同样如此——请在 Windows 上执行打包。
+
+### 打包
+
+```bat
+pip install -r requirements-dev.txt
+build_exe.bat
+```
+
+脚本会自动检测并安装 PyInstaller。产物位于 `dist\` 目录：
+
+| 文件 | 说明 |
+|---|---|
+| `uniapp-android-auto-build.exe` | 独立可执行文件（控制台程序，约 43 MB） |
+| `config.yaml.example` | 配置模板（由脚本自动复制） |
+
+### 分发与目标机器使用
+
+1. 将 `uniapp-android-auto-build.exe` 与 `config.yaml.example` 放入**同一目录**。
+2. 首次运行 exe：检测到缺少配置后，会自动根据模板生成 `config.yaml` 并退出。
+3. 填写 `config.yaml`（见配置说明）后再次运行 exe，服务即启动。
+
+运行时行为：
+
+| 项目 | 行为 |
+|---|---|
+| 配置读取 | exe 始终从自身所在目录读取 `config.yaml`，与当前工作目录无关 |
+| 日志写入 | exe 同级的 `logs\` 目录 |
+| 命令行参数 | 与源码模式完全一致：`--web-only`、`--bot-only`、`--run-once`、`--project`、`--list`、`--config`、`--host`、`--port` |
+| 启动耗时 | 首次启动需数秒自解压，后续启动更快 |
+
+注意事项：
+
+- `config.yaml` 含密钥凭证，请勿公开分发。
+- 个别杀毒软件可能误报 PyInstaller 生成的可执行文件，可添加信任或改用源码模式。
+- 升级时重新执行 `build_exe.bat` 并替换 exe 即可，已有的 `config.yaml` 与 `logs\` 不受影响。
+
 ## 配置说明
 
 完整注释的示例见 [config.yaml.example](./config.yaml.example)。主要字段：
@@ -145,9 +186,12 @@ python -m pytest tests/ -v
 
 ```
 ├── main.py                  # 入口：Web 控制台 + 飞书机器人（双服务）
-├── start.bat                # 快速启动脚本
+├── start.bat                # 快速启动脚本（源码模式）
+├── build_exe.bat            # 打包独立可执行文件（PyInstaller）
+├── uniapp-android-auto-build.spec  # PyInstaller 打包配置
 ├── config.yaml.example      # 配置模板
 ├── requirements.txt
+├── requirements-dev.txt     # 开发依赖（含 PyInstaller）
 ├── bot/
 │   └── feishu_bot.py        # 飞书机器人（WebSocket 长连接）
 ├── pipeline/
