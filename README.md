@@ -106,11 +106,23 @@ python main.py --host 0.0.0.0 --port 9000
 
 Use PyInstaller to package the whole tool into a single-file executable so it can run on build machines without a Python environment.
 
-> Pre-built executables are published automatically to [GitHub Releases](https://github.com/MW-S/uniapp-android-auto-build/releases) for every `vX.Y.Z` tag — download the zip, extract it, and follow the distribution steps below. Build it yourself only when you need changes.
+> The pipeline only supports Windows (see Prerequisites), and so does the packaged exe — use it on Windows, whether downloaded or built locally.
 
-> The pipeline only supports Windows (see Prerequisites), and so does the packaged exe — build on Windows.
+### Download pre-built releases (recommended)
 
-### Build
+For every `vX.Y.Z` tag pushed, GitHub Actions automatically builds and publishes a new release. Download the assets of the latest version from [GitHub Releases](https://github.com/MW-S/uniapp-android-auto-build/releases):
+
+| Asset | Description |
+|---|---|
+| `uniapp-android-auto-build-<version>-win-x64.zip` | Distribution package (recommended): exe + config template, extract and use |
+| `uniapp-android-auto-build.exe` | Standalone executable (~40 MB) |
+| `config.yaml.example` | Config template |
+
+After extracting, follow the "Distribute & run on the target machine" section below.
+
+### Build it yourself
+
+Only needed when you have modified the code:
 
 ```bat
 pip install -r requirements-dev.txt
@@ -121,7 +133,7 @@ The script installs PyInstaller automatically if missing. Output under `dist\`:
 
 | File | Description |
 |---|---|
-| `uniapp-android-auto-build.exe` | Standalone executable (console app, ~43 MB) |
+| `uniapp-android-auto-build.exe` | Standalone executable (console app, ~40 MB) |
 | `config.yaml.example` | Config template (copied automatically by the script) |
 
 ### Distribute & run on the target machine
@@ -143,7 +155,7 @@ Notes:
 
 - `config.yaml` contains credentials — never distribute it publicly.
 - Some antivirus software may falsely flag PyInstaller executables; add an exclusion or fall back to source mode.
-- To upgrade, rebuild with `build_exe.bat` and replace the exe; your existing `config.yaml` and `logs\` are unaffected.
+- To upgrade, download the new zip from Releases (or rebuild with `build_exe.bat` if you built locally) and replace the exe; your existing `config.yaml` and `logs\` are unaffected.
 
 ## Configuration reference
 

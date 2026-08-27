@@ -106,11 +106,23 @@ python main.py --host 0.0.0.0 --port 9000
 
 使用 PyInstaller 可将整个工具打包为单文件可执行程序，方便在没有 Python 环境的打包机上运行。
 
-> 每推送一个 `vX.Y.Z` 标签，GitHub Actions 会自动打包并发布到 [GitHub Releases](https://github.com/MW-S/uniapp-android-auto-build/releases)——直接下载压缩包解压，按下文分发步骤使用即可；仅在需要修改代码时才自行打包。
+> 流水线仅支持 Windows（见环境要求），打包产物同样如此——无论下载还是自行打包，请在 Windows 上使用。
 
-> 流水线仅支持 Windows（见环境要求），打包产物同样如此——请在 Windows 上执行打包。
+### 下载预构建版本（推荐）
 
-### 打包
+每推送一个 `vX.Y.Z` 标签，GitHub Actions 会自动打包并发布新版本。直接到 [GitHub Releases](https://github.com/MW-S/uniapp-android-auto-build/releases) 下载最新版的附件：
+
+| 附件 | 说明 |
+|---|---|
+| `uniapp-android-auto-build-<版本>-win-x64.zip` | 分发包（推荐）：含 exe 与配置模板，解压即用 |
+| `uniapp-android-auto-build.exe` | 独立可执行文件（约 40 MB） |
+| `config.yaml.example` | 配置模板 |
+
+解压后按下文「分发与目标机器使用」操作即可。
+
+### 自行打包
+
+仅在修改过代码时需要：
 
 ```bat
 pip install -r requirements-dev.txt
@@ -121,7 +133,7 @@ build_exe.bat
 
 | 文件 | 说明 |
 |---|---|
-| `uniapp-android-auto-build.exe` | 独立可执行文件（控制台程序，约 43 MB） |
+| `uniapp-android-auto-build.exe` | 独立可执行文件（控制台程序，约 40 MB） |
 | `config.yaml.example` | 配置模板（由脚本自动复制） |
 
 ### 分发与目标机器使用
@@ -143,7 +155,7 @@ build_exe.bat
 
 - `config.yaml` 含密钥凭证，请勿公开分发。
 - 个别杀毒软件可能误报 PyInstaller 生成的可执行文件，可添加信任或改用源码模式。
-- 升级时重新执行 `build_exe.bat` 并替换 exe 即可，已有的 `config.yaml` 与 `logs\` 不受影响。
+- 升级方式：从 Releases 下载新版压缩包（自行打包者重新执行 `build_exe.bat`）并替换 exe，已有的 `config.yaml` 与 `logs\` 不受影响。
 
 ## 配置说明
 
