@@ -1,0 +1,40 @@
+# Docker build context exclusions for uniapp-android-auto-build.
+# Keeps the COPY layer small and deterministic.
+
+# --- Python / runtime outputs ----------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.tox/
+
+# --- Local logs & secrets (never bake them) ---------------------------------
+logs/
+config.yaml
+config.yaml.bak.*
+*.log
+
+# --- Node.js (uni-app repos happen to live outside this context, but guard) --
+node_modules/
+dist/
+unpackage/
+
+# --- PyInstaller outputs ----------------------------------------------------
+build/
+dist/
+*.spec
+
+# --- Git --------------------------------------------------------------------
+.git/
+.gitattributes
+.github/
+.gitignore
+
+# --- OS junk ----------------------------------------------------------------
+.DS_Store
+Thumbs.db

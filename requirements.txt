@@ -1,3 +1,5 @@
+# Python >= 3.10 (3.12.x recommended); cross-platform: Linux / macOS / Windows
+# Install: python -m pip install -r requirements.txt
 lark-oapi
 webdavclient3
 PyYAML

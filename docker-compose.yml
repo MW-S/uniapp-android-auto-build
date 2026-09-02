@@ -1,0 +1,86 @@
+# ============================================================================
+# uniapp-android-auto-build — Docker Compose deployment
+# ----------------------------------------------------------------------------
+# Quick start (on Linux x86_64 / arm64 with Docker >= 24):
+#
+#   1) Copy `.env.example` to `.env` and edit the mount paths.
+#   2) Put your config under $BUILDER_CONFIG_DIR/config.yaml.
+#      If the file does not exist yet the container prints a hint and exits.
+#   3) Build image:    docker compose build
+#      Or pull prebuilt: docker compose pull (if you pushed it to a registry)
+#   4) Launch:          docker compose up -d
+#      Check logs:      docker compose logs -f
+#      One-off build:   docker compose run --rm builder --run-once --project mes-pda
+#
+# Notes:
+#   * The container ENTRYPOINT is `python main.py`, so any extra CLI args
+#     are forwarded directly (--list, --config, --host, --port, ...).
+#   * Feishu bot uses an OUTBOUND WebSocket connection. We never need to
+#     expose extra ports for it. The only published port is the Web UI.
+#   * Caches (Gradle + npm) and the Android SDK are mounted as named volumes
+#     so subsequent builds stay fast.
+# ============================================================================
+
+services:
+  builder:
+    image: ${BUILDER_IMAGE:-uniapp-android-builder:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
+    container_name: ${COMPOSE_PROJECT_NAME:-uniapp-builder}
+    restart: unless-stopped
+    # Default CMD runs Web + Feishu. Override for one-shot runs:
+    #   docker compose run --rm builder --run-once --project mes-pda
+    command: []
+    environment:
+      # Propagate TZ so log timestamps in logs/ match your local machine.
+      TZ: ${TZ:-Asia/Shanghai}
+      # Hard-override any Python stdout encoding issues inside slim image.
+      PYTHONIOENCODING: utf-8
+      # Ensure Gradle uses the exact JDK we ship with the image.
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+      ANDROID_SDK_ROOT: /opt/android-sdk
+      ANDROID_HOME: /opt/android-sdk
+      GRADLE_USER_HOME: /opt/gradle-cache
+      NPM_CONFIG_CACHE: /opt/npm-cache
+    ports:
+      - "${BUILDER_HOST:-127.0.0.1}:${BUILDER_PORT:-8000}:8000"
+    working_dir: /app
+    # -----------------------------------------------------------------------
+    # Mounts
+    # -----------------------------------------------------------------------
+    # 1) config.yaml + credentials (read-only to avoid the container
+    #    accidentally overwriting secrets you edit outside).
+    - ${BUILDER_CONFIG_DIR:-./runtime/config}:/app/runtime-config:ro
+    # 2) Build logs live outside the container so `docker logs` isn't the
+    #    only source of truth.
+    - ${BUILDER_LOG_DIR:-./runtime/logs}:/app/logs:rw
+    # 3) uni-app source code & Android shell projects. The paths you use
+    #    inside config.yaml must match the IN-container paths below.
+    - ${REPOS_ROOT:-./runtime/repos}:/repos:rw
+    # 4) Persistent caches shared between restarts / one-shot runs.
+    #    Never commit these volumes to an image; they grow to several GB.
+    - gradle-cache:/opt/gradle-cache:rw
+    - npm-cache:/opt/npm-cache:rw
+    - android-sdk:/opt/android-sdk:rw
+    # 5) If the builder host also needs to read the generated APKs from
+    #    outside Docker, you can add one more mount and make kodcloud upload
+    #    optional. Example (uncomment & edit):
+    # - ./runtime/apk-out:/apk-out:rw
+
+    healthcheck:
+      test: ["CMD", "python", "main.py", "--list"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  gradle-cache:
+    name: ${COMPOSE_PROJECT_NAME:-uniapp-builder}_gradle-cache
+  npm-cache:
+    name: ${COMPOSE_PROJECT_NAME:-uniapp-builder}_npm-cache
+  android-sdk:
+    name: ${COMPOSE_PROJECT_NAME:-uniapp-builder}_android-sdk

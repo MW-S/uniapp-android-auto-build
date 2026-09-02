@@ -7,24 +7,31 @@ class ConfigError(Exception):
     pass
 
 
-FEISHU_REQUIRED_FIELDS = ("app_id", "app_secret", "trigger_keywords")
-
+# Feishu is OPTIONAL: when feishu block is absent OR app_id/app_secret are empty strings,
+# the program runs in web-only mode (or reports an error for --bot-only). We only enforce:
+#   - feishu.trigger_keywords must be a non-empty list WHEN feishu block is present
+#     (otherwise the bot has no way to trigger), AND only when app_id/app_secret are also set.
 PROJECT_REQUIRED_FIELDS = (
     "key",
     "name",
     "git.repo_dir",
     "git.branch",
-    "hbuilderx.cli_path",
-    "hbuilderx.project_name",
     "hbuilderx.appid",
     "android.project_dir",
     "android.assets_dir",
-    "android.apk_output",
     "kodcloud.webdav_url",
     "kodcloud.username",
     "kodcloud.password",
     "kodcloud.remote_dir",
 )
+# Fields that are optional on paper but the runner still needs a value.
+# For npm-mode repos, HBuilderX fields are not used, but old code paths still read them.
+PROJECT_OPTIONAL_WITH_DEFAULT = {
+    "hbuilderx.cli_path": "",
+    "hbuilderx.project_name": "",
+    "android.apk_output": "",
+    "kodcloud.apk_prefix": "",
+}
 
 
 def _get_nested(mapping: dict, field_name: str):
@@ -35,7 +42,21 @@ def _get_nested(mapping: dict, field_name: str):
     return value.get(key)
 
 
+def _ensure_project_defaults(project: dict) -> None:
+    for dotted, default in PROJECT_OPTIONAL_WITH_DEFAULT.items():
+        if "." not in dotted:
+            if project.get(dotted) in (None, ""):
+                project[dotted] = default
+            continue
+        section, key = dotted.split(".", 1)
+        if not isinstance(project.get(section), dict):
+            project[section] = {}
+        if project[section].get(key) in (None, ""):
+            project[section][key] = default
+
+
 def _validate_project(project, index: int) -> None:
+    _ensure_project_defaults(project)
     label = f"projects[{index}]"
     if not isinstance(project, dict):
         raise ConfigError(f"{label} 必须是字典结构")
@@ -53,18 +74,40 @@ def _validate_project(project, index: int) -> None:
         raise ConfigError(f"配置字段 {label}.aliases 必须是字符串列表")
 
 
-def validate_config(cfg: dict) -> None:
+def _feishu_enabled(cfg: dict) -> bool:
     feishu = cfg.get("feishu")
     if not isinstance(feishu, dict):
-        raise ConfigError("配置缺少必填节点: feishu")
-    for field_name in FEISHU_REQUIRED_FIELDS:
-        value = feishu.get(field_name)
-        if field_name == "trigger_keywords":
-            if not isinstance(value, list) or not value:
-                raise ConfigError("配置字段 feishu.trigger_keywords 必须是非空列表")
-            continue
-        if value is None or (isinstance(value, str) and not value.strip()):
-            raise ConfigError(f"配置缺少有效的必填字段: feishu.{field_name}")
+        return False
+    app_id = (feishu.get("app_id") or "").strip()
+    app_secret = (feishu.get("app_secret") or "").strip()
+    if not app_id or not app_secret:
+        return False
+    if app_id.startswith("cli_xxxxxxxxxxxxxxxx") or "your-" in app_id:
+        return False
+    return True
+
+
+def validate_config(cfg: dict) -> None:
+    feishu = cfg.get("feishu")
+    if feishu is None:
+        # Absent feishu block is OK (user wants pure web-console mode).
+        # Materialize an empty dict so downstream code never has to handle None.
+        cfg["feishu"] = {"trigger_keywords": ["打包", "构建"]}
+    elif not isinstance(feishu, dict):
+        raise ConfigError("配置节点 feishu 必须是字典结构；不需要飞书机器人时可删除 feishu 整个块")
+    else:
+        # Backfill defaults for a present-but-sparse feishu block.
+        if not feishu.get("app_id"):
+            feishu["app_id"] = ""
+        if not feishu.get("app_secret"):
+            feishu["app_secret"] = ""
+        if not isinstance(feishu.get("trigger_keywords"), list) or not feishu["trigger_keywords"]:
+            feishu["trigger_keywords"] = ["打包", "构建"]
+    # Trigger keywords / credentials are only enforced when the user clearly opted in.
+    if _feishu_enabled(cfg):
+        trigger_keywords = cfg["feishu"].get("trigger_keywords")
+        if not isinstance(trigger_keywords, list) or not trigger_keywords:
+            raise ConfigError("feishu 已填写凭证，此时 feishu.trigger_keywords 必须是非空字符串列表")
     projects = cfg.get("projects")
     if not isinstance(projects, list) or not projects:
         raise ConfigError("配置缺少必填节点: projects（至少包含一个项目）")
@@ -75,9 +118,9 @@ def validate_config(cfg: dict) -> None:
     duplicates = sorted({k for k in keys if keys.count(k) > 1})
     if duplicates:
         raise ConfigError(f"projects 中存在重复的 key: {', '.join(duplicates)}")
-    default_project = cfg.get("default_project")
-    if default_project is not None:
-        if not isinstance(default_project, str) or default_project.strip() not in keys:
+    default_project_key = cfg.get("default_project")
+    if default_project_key is not None:
+        if not isinstance(default_project_key, str) or default_project_key.strip() not in keys:
             raise ConfigError(f"default_project 必须指向已有项目的 key，可选值: {', '.join(keys)}")
 
 

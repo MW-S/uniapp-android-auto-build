@@ -1,0 +1,56 @@
+# uni-app Android 自动构建打包流水线 - 配置示例（多项目）
+# 使用前请复制本文件为 config.yaml，并按实际情况填写所有字段
+# 提示：可用 Web 控制台（python main.py）在浏览器 http://127.0.0.1:8000 配置本文件参数，保存后自动生效并备份原配置
+
+# 飞书机器人配置（全局共享，所有项目同一个机器人）
+feishu:
+  # 飞书自建应用 App ID
+  app_id: cli_xxxxxxxxxxxxxxxx
+  # 飞书自建应用 App Secret
+  app_secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # 触发构建的关键词列表，消息命中任一关键词后再按项目触发词匹配项目
+  trigger_keywords:
+    - 打包
+    - 构建
+
+# 命中触发关键词但未识别出项目时默认构建的项目（填项目 key）；删除此行则无默认项目
+# default_project: demo-app
+
+# 项目列表，每个项目独立配置 git/HBuilderX/Android壳工程/可道云
+projects:
+  - key: demo-app
+    # 项目显示名（构建报告与飞书回复中展示）
+    name: 示例项目
+    # 飞书消息中出现这些词时匹配到本项目（不区分大小写）
+    aliases:
+      - demo
+    git:
+      # uni-app git仓库本地路径（流水线会在此目录执行 git pull）
+      repo_dir: D:\projects\uniapp-demo
+      # 要拉取并构建的分支名
+      branch: main
+    hbuilderx:
+      # HBuilderX安装目录下cli.exe完整路径
+      cli_path: C:\Program Files\HBuilderX\cli.exe
+      # HBuilderX中的项目名（与HBuilderX工程列表中显示的名称一致）
+      project_name: uniapp-demo
+      # uni-app项目appid，如 __UNI__XXXXXXX
+      appid: __UNI__XXXXXXX
+    android:
+      # Android壳工程根目录，需包含 gradlew.bat
+      project_dir: D:\projects\uniapp-android
+      # 资源目标目录（相对或绝对路径均可），如 app/src/main/assets/apps/__UNI__XXX，复制前会被清空
+      assets_dir: app/src/main/assets/apps/__UNI__XXX
+      # 相对project_dir的apk输出目录
+      apk_output: app/build/outputs/apk/release
+    kodcloud:
+      # WebDAV服务地址，如 https://your-domain.com/?webdav/
+      webdav_url: https://your-domain.com/?webdav/
+      # WebDAV登录用户名
+      username: your-username
+      # WebDAV登录密码
+      password: your-password
+      # WebDAV上传目标目录；历史版本会全部保留在该目录下
+      remote_dir: /builds/demo-app/
+      # 上传APK的远端文件名前缀，最终文件名为 前缀_年月日_时分秒.apk；不填则用项目key
+      apk_prefix: DemoApp

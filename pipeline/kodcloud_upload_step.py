@@ -30,10 +30,28 @@ def run(cfg: dict, apk_path: str) -> StepResult:
             return StepResult.fail_result(f"apk文件不存在: {apk_path}")
 
         kod_cfg = cfg["kodcloud"]
-        webdav_url = kod_cfg["webdav_url"]
-        username = kod_cfg["username"]
-        password = kod_cfg["password"]
+        webdav_url = (kod_cfg.get("webdav_url") or "").strip().rstrip("/") + "/"
+        username = (kod_cfg.get("username") or "").strip()
+        password = (kod_cfg.get("password") or "").strip()
         remote_dir = kod_cfg["remote_dir"]
+
+        # Guard against placeholder values copied from config.yaml.example.
+        # This produces a clear early failure instead of confusing exceptions deep
+        # in the WebDAV client stack (encoding or TLS errors on the placeholder URL).
+        placeholder_hints = []
+        if "your-domain.com" in webdav_url or not webdav_url.strip("/"):
+            placeholder_hints.append(f"webdav_url={webdav_url!r} (placeholder)")
+        if not username or "your-" in username:
+            placeholder_hints.append(f"username={username!r} (placeholder)")
+        if not password or "your-" in password:
+            placeholder_hints.append(f"password=*** (placeholder or empty)")
+        if placeholder_hints:
+            return StepResult.fail_result(
+                "可道云/WebDAV 配置仍为示例占位值，已停止上传以避免无意义的请求。"
+                "请先在 config.yaml 中填写真实的 "
+                + "、".join(placeholder_hints)
+                + "。"
+            )
 
         options = {
             "webdav_hostname": webdav_url,

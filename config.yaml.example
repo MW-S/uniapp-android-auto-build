@@ -1,13 +1,21 @@
 # uni-app Android 自动构建打包流水线 - 配置示例（多项目）
 # 使用前请复制本文件为 config.yaml，并按实际情况填写所有字段
 # 提示：可用 Web 控制台（python main.py）在浏览器 http://127.0.0.1:8000 配置本文件参数，保存后自动生效并备份原配置
+# 跨平台支持说明：
+# - Windows: android.project_dir 下应存在 gradlew.bat；hbuilderx.cli_path 指向 cli.exe
+# - macOS  : android.project_dir 下应存在 gradlew；hbuilderx.cli_path 指向 /Applications/HBuilderX.app/Contents/MacOS/cli
+# - Linux  : 可运行 git / 资源复制 / Android(gradlew) / 可道云上传；但 HBuilderX 打包步骤不支持（需 Windows 或 macOS），
+#           可通过关闭某项目 HBuilderX 步骤（配置 android.assets_dir 已预先填充 www 资源）或改为独立步骤实现。
 
 # 飞书机器人配置（全局共享，所有项目同一个机器人）
+# 暂时不想用飞书？把下面的 app_id / app_secret 留空即可（或直接把整个 feishu 块删掉）
+#   - 留空/删除后：双服务模式启动时只会启动 Web 控制台，不会尝试连飞书
+#   - --bot-only 模式时则会提示“未启用飞书机器人”并退出
 feishu:
-  # 飞书自建应用 App ID
-  app_id: cli_xxxxxxxxxxxxxxxx
-  # 飞书自建应用 App Secret
-  app_secret: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # 飞书自建应用 App ID；暂时不用请留空
+  app_id: ""
+  # 飞书自建应用 App Secret；暂时不用请留空
+  app_secret: ""
   # 触发构建的关键词列表，消息命中任一关键词后再按项目触发词匹配项目
   trigger_keywords:
     - 打包
@@ -30,18 +38,19 @@ projects:
       # 要拉取并构建的分支名
       branch: main
     hbuilderx:
-      # HBuilderX安装目录下cli.exe完整路径
+      # HBuilderX安装目录下cli.exe完整路径（若仓库package.json已有build:app脚本，npm模式会优先使用，此路径可不填）
       cli_path: C:\Program Files\HBuilderX\cli.exe
-      # HBuilderX中的项目名（与HBuilderX工程列表中显示的名称一致）
+      # HBuilderX中的项目名（与HBuilderX工程列表中显示的名称一致），npm模式可忽略
       project_name: uniapp-demo
       # uni-app项目appid，如 __UNI__XXXXXXX
       appid: __UNI__XXXXXXX
     android:
-      # Android壳工程根目录，需包含 gradlew.bat
+      # Android壳工程根目录，需包含 gradlew.bat (Windows) 或 gradlew (macOS/Linux)
       project_dir: D:\projects\uniapp-android
       # 资源目标目录（相对或绝对路径均可），如 app/src/main/assets/apps/__UNI__XXX，复制前会被清空
       assets_dir: app/src/main/assets/apps/__UNI__XXX
-      # 相对project_dir的apk输出目录
+      # 相对 project_dir 的 APK 输出目录（流水线每次都会 clean assembleRelease 强制全量重建、重新签名，
+      # 所以该目录下的 APK 修改时间/签名每次都会刷新）。找不到时会自动回退到 Gradle 默认输出。
       apk_output: app/build/outputs/apk/release
     kodcloud:
       # WebDAV服务地址，如 https://your-domain.com/?webdav/
